@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lump Sum Payoff Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+/* ====== RESET & BASE ====== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #ffffff;
+  color: #1a1a2e;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ====== DESIGN TOKENS ====== */
+:root {
+  --ink:       #1a1a2e;
+  --ink2:      #3d3d5c;
+  --ink3:      #7a7a9a;
+  --ink4:      #b0b0c8;
+  --paper:     #ffffff;
+  --paper2:    #f7f7fb;
+  --paper3:    #eff0f7;
+  --accent:    #2563eb;
+  --accent2:   #3b82f6;
+  --accent-lt: #eff6ff;
+  --teal:      #0891b2;
+  --teal-lt:   #ecfeff;
+  --green:     #059669;
+  --green-lt:  #ecfdf5;
+  --amber:     #d97706;
+  --amber-lt:  #fffbeb;
+  --red:       #dc2626;
+  --red-lt:    #fef2f2;
+  --border:    #e5e5ef;
+  --border2:   #d0d0e4;
+  --shadow-sm: 0 1px 3px rgba(26,26,46,0.07), 0 1px 2px rgba(26,26,46,0.05);
+  --shadow:    0 4px 12px rgba(26,26,46,0.08), 0 2px 4px rgba(26,26,46,0.05);
+  --shadow-lg: 0 12px 32px rgba(26,26,46,0.1), 0 4px 8px rgba(26,26,46,0.06);
+  --radius:    10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+}
+
+/* ====== TYPOGRAPHY ====== */
+.serif { font-family: 'Libre Baskerville', serif; }
+.mono  { font-family: 'DM Mono', monospace; }
+
+/* ====== HEADER ====== */
+.site-header {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  box-shadow: var(--shadow-sm);
+}
+.header-inner {
+  max-width: 1440px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 58px;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-mark {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-family: 'Libre Baskerville', serif; font-size: 15px; font-weight: 700;
+  color: #fff; flex-shrink: 0;
+}
+.brand-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.brand-name span { display: block; font-size: 11px; font-weight: 400; color: var(--ink3); }
+.header-nav { display: flex; gap: 2px; }
+.nav-page-btn {
+  padding: 6px 14px; border: none; background: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--ink3); border-radius: var(--radius-sm);
+  transition: all 0.18s; display: flex; align-items: center; gap: 5px;
+}
+.nav-page-btn:hover { background: var(--paper2); color: var(--ink); }
+.nav-page-btn.active { background: var(--accent-lt); color: var(--accent); font-weight: 600; }
+.nav-page-btn .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: 0.5;
+}
+.nav-page-btn.active .dot { opacity: 1; }
+.header-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); text-align: right; line-height: 1.5; }
+
+/* ====== PAGE SYSTEM ====== */
+.page { display: none; min-height: calc(100vh - 58px); }
+.page.active { display: block; }
+.page-enter { animation: pageIn 0.3s ease forwards; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ====== LAYOUT ====== */
+.page-body { max-width: 1440px; margin: 0 auto; padding: 2rem 2rem 3rem; }
+.page-header {
+  padding: 2.5rem 0 2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+.page-eyebrow {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.page-eyebrow::before { content: ''; display: block; width: 20px; height: 1px; background: var(--accent); }
+.page-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+  font-weight: 700; color: var(--ink); line-height: 1.2; margin-bottom: 6px;
+}
+.page-desc { font-size: 13px; color: var(--ink3); line-height: 1.7; max-width: 600px; }
+
+/* ====== CONTROLS CARD ====== */
+.controls-card {
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+.controls-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink3); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;
+}
+.controls-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.sliders-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
+.slider-group { }
+.slider-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink3); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.slider-value { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--accent); }
+input[type=range] {
+  width: 100%; -webkit-appearance: none; height: 4px;
+  background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--accent);
+  border: 2.5px solid #fff; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(37,99,235,0.3);
+}
+input[type=range]::-webkit-slider-runnable-track { border-radius: 2px; }
+
+/* ====== KPI CARDS ====== */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+.kpi {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  position: relative; overflow: hidden;
+}
+.kpi::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.kpi.kpi-blue::after   { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.kpi.kpi-teal::after   { background: linear-gradient(90deg, var(--teal), #22d3ee); }
+.kpi.kpi-green::after  { background: linear-gradient(90deg, var(--green), #34d399); }
+.kpi.kpi-amber::after  { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+.kpi.kpi-red::after    { background: linear-gradient(90deg, var(--red), #f87171); }
+.kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink3); margin-bottom: 6px; }
+.kpi-value { font-family: 'Libre Baskerville', serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); line-height: 1.1; margin-bottom: 3px; }
+.kpi-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink3); }
+
+/* ====== SECTION HEADING ====== */
+.section-heading {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  margin-bottom: 1rem; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.section-heading .num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ====== CHART CARDS ====== */
+.card {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.card-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.card-sub { font-size: 11px; color: var(--ink3); line-height: 1.5; margin-bottom: 1rem; }
+.chart-outer { position: relative; width: 100%; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+.span-full { grid-column: 1/-1; }
+@media (max-width: 1000px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* ====== LEGEND ====== */
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink3); }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ====== TABLE ====== */
+.tbl-wrap { overflow-x: auto; border-radius: var(--radius-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 700px; }
+thead tr { background: var(--paper2); border-bottom: 2px solid var(--border2); }
+th {
+  padding: 9px 11px; text-align: right; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink3); white-space: nowrap;
+}
+th:first-child { text-align: center; }
+td {
+  padding: 8px 11px; text-align: right;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--ink2); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td:first-child { text-align: center; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; color: var(--ink); }
+tbody tr:hover td { background: var(--paper2); }
+tr.row-optimal td { background: #ecfdf5; }
+tr.row-optimal td:first-child { color: var(--green); }
+tr.row-selected td { background: #eff6ff; }
+tr.row-selected td:first-child { color: var(--accent); }
+tr.row-both td { background: #f0fdf4; }
+tr.row-both td:first-child { color: var(--green); }
+.badge {
+  display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle;
+}
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-blue  { background: #dbeafe; color: #1d4ed8; }
+
+/* ====== INFO BOX ====== */
+.info-box {
+  border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  font-size: 13px; line-height: 1.7; margin-bottom: 1.25rem;
+  border-left: 3px solid;
+}
+.info-box.blue  { background: var(--accent-lt); border-color: var(--accent);  color: var(--ink2); }
+.info-box.green { background: var(--green-lt);  border-color: var(--green);   color: var(--ink2); }
+.info-box.amber { background: var(--amber-lt);  border-color: var(--amber);   color: var(--ink2); }
+.info-box.red   { background: var(--red-lt);    border-color: var(--red);     color: var(--ink2); }
+.info-box strong { color: var(--ink); font-weight: 600; }
+.info-box .info-title { font-weight: 600; color: var(--ink); margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* ====== QUARTER SELECTOR (Page 3) ====== */
+.q-selector-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink3); margin-bottom: 10px; }
+.q-btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.5rem; }
+.q-btn {
+  padding: 6px 13px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500;
+  font-family: 'DM Mono', monospace; border: 1px solid var(--border2);
+  background: var(--paper); color: var(--ink2); cursor: pointer; transition: all 0.15s;
+}
+.q-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-lt); }
+.q-btn.sel-active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.q-btn.opt-btn { border-color: var(--green); color: var(--green); }
+.q-btn.opt-btn.sel-active { background: var(--green); color: #fff; border-color: var(--green); }
+.q-btn.never-btn { border-color: var(--ink3); color: var(--ink3); }
+.q-btn.never-btn.sel-active { background: var(--ink2); color: #fff; border-color: var(--ink2); }
+
+/* ====== SCENARIO GRID ====== */
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.sc-card {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: box-shadow 0.2s;
+}
+.sc-card:hover { box-shadow: var(--shadow); }
+.sc-card.sel-card { border-color: var(--accent); background: var(--accent-lt); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.sc-card.opt-card { border-color: var(--green); background: var(--green-lt); }
+.sc-card.both-card { border-color: var(--green); background: var(--green-lt); box-shadow: 0 0 0 3px rgba(5,150,105,0.12); }
+.sc-chip {
+  position: absolute; top: 10px; right: 10px;
+  font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: 3px;
+}
+.chip-sel  { background: #dbeafe; color: #1d4ed8; }
+.chip-opt  { background: #dcfce7; color: #166534; }
+.sc-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.sc-sub   { font-size: 11px; color: var(--ink3); margin-bottom: 12px; }
+.sc-line  { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; }
+.sc-line .lbl { color: var(--ink3); }
+.sc-line .val { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--ink2); }
+.sc-total-row {
+  border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px;
+  display: flex; justify-content: space-between; font-size: 13px; font-weight: 600;
+}
+.sc-total-row .lbl { color: var(--ink2); }
+.sc-total-row .val { font-family: 'DM Mono', monospace; color: var(--ink); }
+
+/* ====== OPTIMAL HIGHLIGHT BANNER ====== */
+.optimal-banner {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1.5px solid var(--green);
+  border-radius: var(--radius-lg); padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem; display: flex; flex-wrap: wrap; gap: 2rem; align-items: center;
+}
+.ob-left { flex: 1; min-width: 240px; }
+.ob-title { font-family: 'Libre Baskerville', serif; font-size: 18px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+.ob-desc { font-size: 13px; color: var(--ink2); line-height: 1.7; }
+.ob-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+.ob-stat .num { font-family: 'Libre Baskerville', serif; font-size: 26px; font-weight: 700; color: var(--green); line-height: 1; }
+.ob-stat .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink3); margin-top: 2px; }
+
+/* ====== FOOTER ====== */
+footer {
+  border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: center;
+  font-size: 12px; color: var(--ink3); background: var(--paper2);
+}
+footer strong { color: var(--ink); font-weight: 600; }
+
+/* ====== MISC ====== */
+.text-blue   { color: var(--accent); }
+.text-green  { color: var(--green); }
+.text-amber  { color: var(--amber); }
+.text-red    { color: var(--red); }
+.text-teal   { color: var(--teal); }
+.spacer { margin-bottom: 1.25rem; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#">
+      <div class="brand-mark">A</div>
+      <div class="brand-name">
+        ADA Lump Sum Payoff Analyzer
+        <span></span>
+      </div>
+    </a>
+    <nav class="header-nav">
+      <button class="nav-page-btn active" onclick="goTo(1,this)"><span class="dot"></span>Parameters</button>
+      <button class="nav-page-btn" onclick="goTo(2,this)"><span class="dot"></span>Amortization</button>
+      <button class="nav-page-btn" onclick="goTo(3,this)"><span class="dot"></span>Charts</button>
+      <!-- <button class="nav-page-btn" onclick="goTo(4,this)"><span class="dot"></span>Scenario Analysis</button> -->
+    </nav>
+    <div class="header-meta mono" id="clockBox">Loading...</div>
+  </div>
+</header>
+
+<!-- ===================== PAGE 1: PARAMETERS ===================== -->
+<div class="page active" id="page-1">
+<div class="page-body">
+  <div class="page-header">
+    <div class="page-eyebrow">Page 1 of 3</div>
+    <div class="page-title serif">Set Financial Parameters</div>
+    <div class="page-desc">Configure the plot price, interest rate, installment count, and financed portion. All subsequent pages will reflect these values in real time.</div>
+  </div>
+
+  <div class="controls-card">
+    <div class="controls-label">Financing Parameters</div>
+    <div class="sliders-grid">
+      <div class="slider-group">
+        <div class="slider-label">Plot Price <span class="slider-value mono" id="s_price">Rs. 25,92,000</span></div>
+        <input type="range" id="sl_price" min="500000" max="15000000" step="10000" value="2592000" oninput="syncSlider()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">Annual Interest Rate <span class="slider-value mono" id="s_rate">12.0 %</span></div>
+        <input type="range" id="sl_rate" min="6" max="18" step="0.5" value="12" oninput="syncSlider()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">Number of Installments <span class="slider-value mono" id="s_n">12</span></div>
+        <input type="range" id="sl_n" min="4" max="20" step="1" value="12" oninput="syncSlider()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">Financed Portion <span class="slider-value mono" id="s_fin">75 %</span></div>
+        <input type="range" id="sl_fin" min="50" max="100" step="5" value="75" oninput="syncSlider()">
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="kpi-row" id="kpi_p1">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- FORMULA EXPLANATION -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">How the Quarterly EMI is Computed</div>
+      <div class="card-sub">Standard amortizing loan formula applied to the financed portion of the plot price.</div>
+      <div style="background:var(--paper2);border-radius:var(--radius-sm);padding:1rem;margin-top:0.5rem;">
+        <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--ink2);line-height:2;">
+          P = Plot Price × Financed %<br>
+          r = Annual Rate / 4 / 100 (quarterly)<br>
+          n = Number of installments<br>
+          <span style="color:var(--accent);font-weight:500;">EMI = P × r × (1+r)^n / [(1+r)^n - 1]</span>
+        </div>
+      </div>
+      <div style="margin-top:1rem;font-size:12px;color:var(--ink3);line-height:1.7;">
+        Each EMI contains two parts: an <strong style="color:var(--ink)">interest component</strong> (principal × quarterly rate) and a <strong style="color:var(--ink)">principal component</strong> (EMI minus interest). As installments progress, the interest share falls and the principal share rises.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">The Lump Sum Decision Problem</div>
+      <div class="card-sub">Why we are doing this ?</div>
+      <div style="font-size:12px;color:var(--ink2);line-height:1.8;margin-top:0.5rem;">
+        <p style="margin-bottom:8px;">If ADA <strong style="color:var(--ink)">allows lump sum too early</strong>, it forfeits interest income that would have accrued on the unpaid balance. The full interest pool is earned only if all installments run to completion.</p>
+        <p style="margin-bottom:8px;">If ADA <strong style="color:var(--ink)">never allows lump sum</strong>, it maximises interest income but misses the liquidity benefit of receiving the full outstanding principal at once.</p>
+        <p>The optimal quarter is where the marginal interest in remaining installments becomes negligible relative to the cash advantage of an immediate lump sum. This platform intends to identify that point precisely.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
+    <button onclick="goTo(2, document.querySelectorAll('.nav-page-btn')[1])" style="padding:10px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.25);">
+      Next: View Amortization Table &rarr;
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- ===================== PAGE 2: AMORTIZATION ===================== -->
+<div class="page" id="page-2">
+<div class="page-body">
+  <div class="page-header">
+    <div class="page-eyebrow">Page 2 of 3</div>
+    <div class="page-title serif">Full Amortization Schedule</div>
+    <div class="page-desc">Quarterly breakdown of every installment. Green row marks the optimal lump sum quarter. The lump sum column shows what the allottee would pay if they settle at that point.</div>
+  </div>
+
+  <div class="kpi-row" id="kpi_p2"></div>
+
+  <div class="info-box blue" id="amorFormula">
+    <!-- filled by JS -->
+  </div>
+
+  <div class="section-heading"><div class="num">1</div> Quarterly Installment Schedule</div>
+  <div class="card spacer">
+    <div class="tbl-wrap">
+      <table id="tbl_main">
+        <thead><tr>
+          <th>Qtr</th>
+          <th>Opening Balance (Rs.)</th>
+          <th>Interest Earned (Rs.)</th>
+          <th>Interest Share (%)</th>
+          <th>Principal Recovered (Rs.)</th>
+          <th>EMI (Rs.)</th>
+          <th>Closing Balance (Rs.)</th>
+          <th>Cumulative Interest (Rs.)</th>
+          <th>% of Total Interest Earned</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-heading"><div class="num">2</div> Lump Sum Settlement View</div>
+  <div class="info-box amber">
+    <div class="info-title">How to read this table</div>
+    The "Lump Sum Value to Authority" column shows the total amount the authority would receive if the allottee settles in full at that quarter: all EMIs paid so far plus the outstanding principal balance at that point. This equals <strong>Principal + Cumulative Interest earned up to that quarter</strong>.
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table id="tbl_ls">
+        <thead><tr>
+          <th>Allow LS After Qtr</th>
+          <th>EMIs Already Collected (Rs.)</th>
+          <th>Cumulative Interest Earned (Rs.)</th>
+          <th>Outstanding Principal (Rs.)</th>
+          <th>Lump Sum Value to Authority (Rs.)</th>
+          <th>Interest Foregone (Rs.)</th>
+          <th>% Interest Captured</th>
+          <th>Assessment</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap;gap:10px;">
+    <button onclick="goTo(1, document.querySelectorAll('.nav-page-btn')[0])" style="padding:10px 24px;background:var(--paper);color:var(--ink2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">&larr; Back</button>
+    <button onclick="goTo(3, document.querySelectorAll('.nav-page-btn')[2])" style="padding:10px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.25);">Next: View Charts &rarr;</button>
+  </div>
+</div>
+</div>
+
+<!-- ===================== PAGE 3: CHARTS ===================== -->
+<div class="page" id="page-3">
+<div class="page-body">
+  <div class="page-header">
+    <div class="page-eyebrow">Page 3 of 3</div>
+    <div class="page-title serif">Interest and Payoff Charts</div>
+    <div class="page-desc">Visual analysis of amortization dynamics, interest concentration in early quarters, diminishing returns, and the crossover point that defines the optimal lump sum quarter.</div>
+  </div>
+
+  <div class="kpi-row" id="kpi_p3"></div>
+
+  <div class="optimal-banner" id="opt_banner"></div>
+
+  <!-- Chart 1: EMI Split -->
+  <div class="section-heading"><div class="num">1</div> Per-Quarter Principal vs. Interest Split</div>
+  <div class="card spacer">
+    <div class="card-title">Stacked EMI Composition by Quarter</div>
+    <div class="card-sub">Each bar represents one quarterly EMI. The blue portion is the interest component; the grey portion is principal recovery. Notice how interest dominates early installments and shrinks progressively.</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#2563eb"></div>Interest component</div>
+      <div class="leg"><div class="leg-dot" style="background:#cbd5e1"></div>Principal component</div>
+    </div>
+    <div class="chart-outer" style="height:260px"><canvas id="c_split"></canvas></div>
+  </div>
+
+  <!-- Chart 2+3 grid -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Cumulative Interest Earned vs. Remaining Interest</div>
+      <div class="card-sub">The blue curve rises fast early and flattens. The red curve is mirror-opposite. Their crossover is the natural optimal window.</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#2563eb"></div>Cumul. interest earned</div>
+        <div class="leg"><div class="leg-dot" style="background:#dc2626"></div>Remaining interest</div>
+      </div>
+      <div class="chart-outer" style="height:230px"><canvas id="c_cumul"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Marginal Interest Per Quarter (Diminishing Returns)</div>
+      <div class="card-sub">Each bar is the interest earned in that specific quarter. The rapid decline confirms early installments carry disproportionate interest income.</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#0891b2"></div>Quarterly interest earned</div>
+        <div class="leg"><div class="leg-dot" style="background:#059669"></div>Optimal quarter</div>
+      </div>
+      <div class="chart-outer" style="height:230px"><canvas id="c_marginal"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Chart 4: Outstanding balance vs cumulative interest crossover -->
+  <div class="section-heading"><div class="num">2</div> Outstanding Principal vs. Cumulative Interest Crossover</div>
+  <div class="card spacer">
+    <div class="card-title">Balance Crossover Chart</div>
+    <div class="card-sub">The amber line (outstanding balance) falls from full principal to zero. The green line (cumulative interest earned) rises. Where they cross signals the point where accumulated interest equals residual principal.</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#d97706"></div>Outstanding principal balance</div>
+      <div class="leg"><div class="leg-dot" style="background:#059669"></div>Cumulative interest earned</div>
+    </div>
+    <div class="chart-outer" style="height:260px"><canvas id="c_cross"></canvas></div>
+  </div>
+
+  <!-- Chart 5: Total authority receipt per quarter -->
+  <div class="section-heading"><div class="num">3</div> Total Authority Receipt if Lump Sum Accepted at Each Quarter</div>
+  <div class="card spacer">
+    <div class="card-title">Lump Sum Value to Authority by Quarter</div>
+    <div class="card-sub">Each bar = Cumulative Interest Earned + Full Principal. This is what the authority actually receives in total if lump sum is accepted after that quarter. The dashed line is the full-schedule benchmark (Principal + Total Interest). The bar never exceeds the dashed line because early lump sum always means some interest is foregone.</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#059669"></div>Cumulative interest earned</div>
+      <div class="leg"><div class="leg-dot" style="background:#2563eb;opacity:0.55"></div>Principal recovered</div>
+    </div>
+    <div class="chart-outer" style="height:280px"><canvas id="c_receipt"></canvas></div>
+  </div>
+
+  <!-- Chart 6: % interest share per quarter -->
+  <!-- <div class="section-heading"><div class="num">4</div> Interest Share Trend</div>
+  <div class="card spacer">
+    <div class="card-title">Interest as Percentage of Each EMI</div>
+    <div class="card-sub">Shows the declining proportion of each installment that is interest income. When this line flattens near the bottom, the remaining installments are almost entirely principal recovery with negligible interest benefit.</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#7c3aed"></div>Interest % of EMI</div>
+    </div>
+    <div class="chart-outer" style="height:220px"><canvas id="c_pct"></canvas></div>
+  </div> -->
+
+  <div style="display:flex;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap;gap:10px;">
+    <button onclick="goTo(2, document.querySelectorAll('.nav-page-btn')[1])" style="padding:10px 24px;background:var(--paper);color:var(--ink2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">&larr; Back</button>
+    <!-- <button onclick="goTo(4, document.querySelectorAll('.nav-page-btn')[3])" style="padding:10px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.25);">Next: Scenario Analysis &rarr;</button> -->
+  </div>
+</div>
+</div>
+
+<!-- ===================== PAGE 4: SCENARIO ANALYSIS ===================== -->
+<!-- <div class="page" id="page-4">
+<div class="page-body">
+  <div class="page-header">
+    <div class="page-eyebrow">Step 4 of 4</div>
+    <div class="page-title serif">Scenario Analysis</div>
+    <div class="page-desc">Select any quarter to simulate accepting lump sum after that installment. The platform will show exactly what the authority receives, what is foregone, and how it compares to the optimal and full-schedule benchmarks.</div>
+  </div>
+
+  <div class="optimal-banner" id="opt_banner_4"></div>
+
+  <div class="q-selector-label">Select the quarter after which lump sum payment is allowed</div>
+  <div class="q-btn-row" id="q_btns"></div>
+
+  <div id="sel_insight" class="info-box blue spacer"></div>
+
+  <div class="section-heading"><div class="num">1</div> Detailed Receipt Breakdown for Selected Quarter</div>
+  <div class="kpi-row" id="kpi_sel"></div>
+
+  <div class="section-heading"><div class="num">2</div> All Scenario Cards</div>
+  <div class="sc-grid" id="sc_grid"></div>
+
+  <div class="section-heading"><div class="num">3</div> Scenario Comparison Chart</div>
+  <div class="card spacer">
+    <div class="card-title">Total Authority Receipt Across All Scenarios</div>
+    <div class="card-sub">Each bar shows total receipts (Principal + Cumulative Interest) if lump sum is accepted after that quarter. The dashed horizontal line is the full-schedule total. The gap between each bar and the line represents interest foregone.</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#059669"></div>Cumulative interest earned</div>
+      <div class="leg"><div class="leg-dot" style="background:#2563eb;opacity:0.5"></div>Principal amount</div>
+    </div>
+    <div class="chart-outer" style="height:300px"><canvas id="c_scenarios"></canvas></div>
+  </div>
+
+  <div class="section-heading"><div class="num">4</div> Interest Foregone by Scenario</div>
+  <div class="card spacer">
+    <div class="card-title">Interest Foregone if Lump Sum Accepted at Each Quarter</div>
+    <div class="card-sub">Lower is better. Accepting lump sum later means less interest is sacrificed. The optimal quarter (green) is where this value first becomes small enough relative to the liquidity benefit.</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#dc2626;opacity:0.7"></div>Interest foregone</div>
+      <div class="leg"><div class="leg-dot" style="background:#059669"></div>Optimal quarter</div>
+    </div>
+    <div class="chart-outer" style="height:240px"><canvas id="c_forgone"></canvas></div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap;gap:10px;">
+    <button onclick="goTo(3, document.querySelectorAll('.nav-page-btn')[2])" style="padding:10px 24px;background:var(--paper);color:var(--ink2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">&larr; Back</button>
+    <button onclick="goTo(1, document.querySelectorAll('.nav-page-btn')[0])" style="padding:10px 24px;background:var(--paper);color:var(--ink2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">Start Over &uarr;</button>
+  </div>
+</div>
+</div> -->
+
+<!-- FOOTER -->
+<footer>
+  <div>Created by <strong>Shreshth Vatsal Sharma</strong> &nbsp;|&nbsp; Aligarh Development Authority &nbsp;|&nbsp; Lump Sum Payoff Analyzer</div>
+</footer>
+
+<script>
+/* ============================================================
+   CORE COMPUTATION
+   ============================================================ */
+
+// Global state
+let G = {
+  price: 2592000, rate: 12, n: 12, finPct: 75,
+  selQ: 6,    // 1-indexed quarter selected on page 4
+  charts: {}
+};
+
+function fmt(n)     { return 'Rs. ' + Math.round(n).toLocaleString('en-IN'); }
+function fmtK(n)    { return 'Rs. ' + Math.round(n/1000).toLocaleString('en-IN') + 'K'; }
+function fmtPct(n)  { return n.toFixed(1) + '%'; }
+
+function compute() {
+  const { price, rate, n, finPct } = G;
+  const P = price * finPct / 100;
+  const r = rate / 4 / 100;
+  const emi = P * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+  const totalEMIs = emi * n;
+  const totalInterest = totalEMIs - P;
+
+  let bal = P, rows = [], cumInt = 0;
+  for (let i = 1; i <= n; i++) {
+    const intC  = bal * r;
+    const prinC = emi - intC;
+    const closing = Math.max(0, bal - prinC);
+    cumInt += intC;
+    rows.push({
+      i, opening: bal, intC, prinC, emi,
+      closing, cumInt,
+      intShare: intC / emi * 100,
+      cumIntPct: cumInt / totalInterest * 100,
+      remInt: totalInterest - cumInt,
+      // Lump sum value to authority = Principal + cumulative interest (= what they get if allottee settles now)
+      lsValue: P + cumInt,
+      outstanding: closing   // outstanding principal at end of this quarter
+    });
+    bal = closing;
+  }
+
+  // Optimal quarter: first quarter where >= 55% of total interest is captured
+  let optQ = n;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].cumIntPct >= 55) { optQ = i + 1; break; }
+  }
+
+  return { P, r, emi, totalEMIs, totalInterest, rows, optQ };
+}
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function clock() {
+  const now = new Date();
+  document.getElementById('clockBox').innerHTML =
+    now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) +
+    '<br>' + now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+clock(); setInterval(clock, 1000);
+
+/* ============================================================
+   PAGE NAVIGATION
+   ============================================================ */
+let currentPage = 1;
+function goTo(num, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active','page-enter'));
+  document.querySelectorAll('.nav-page-btn').forEach(b => b.classList.remove('active'));
+  const pg = document.getElementById('page-' + num);
+  pg.classList.add('active', 'page-enter');
+  btn.classList.add('active');
+  currentPage = num;
+  window.scrollTo({top:0, behavior:'smooth'});
+  renderPage(num);
+}
+
+function renderPage(num) {
+  const d = compute();
+  if (num === 1) renderP1(d);
+  if (num === 2) renderP2(d);
+  if (num === 3) renderP3(d);
+  if (num === 4) renderP4(d);
+}
+
+/* ============================================================
+   SLIDER SYNC
+   ============================================================ */
+function syncSlider() {
+  G.price  = +document.getElementById('sl_price').value;
+  G.rate   = +document.getElementById('sl_rate').value;
+  G.n      = +document.getElementById('sl_n').value;
+  G.finPct = +document.getElementById('sl_fin').value;
+  if (G.selQ > G.n) G.selQ = G.n;
+
+  document.getElementById('s_price').textContent = 'Rs. ' + G.price.toLocaleString('en-IN');
+  document.getElementById('s_rate').textContent  = G.rate.toFixed(1) + ' %';
+  document.getElementById('s_n').textContent     = G.n;
+  document.getElementById('s_fin').textContent   = G.finPct + ' %';
+
+  renderPage(currentPage);
+}
+
+/* ============================================================
+   CHART HELPER
+   ============================================================ */
+function mkChart(id, cfg) {
+  if (G.charts[id]) G.charts[id].destroy();
+  G.charts[id] = new Chart(document.getElementById(id), cfg);
+}
+const axOpt = {
+  grid: { color: 'rgba(0,0,0,0.05)' },
+  ticks: { color: '#7a7a9a', font: { family: "'DM Mono', monospace", size: 10 } }
+};
+
+/* ============================================================
+   PAGE 1 RENDER
+   ============================================================ */
+function renderP1(d) {
+  document.getElementById('kpi_p1').innerHTML = kpiHtml(d);
+}
+
+/* ============================================================
+   PAGE 2 RENDER
+   ============================================================ */
+function renderP2(d) {
+  document.getElementById('kpi_p2').innerHTML = kpiHtml(d);
+  document.getElementById('amorFormula').innerHTML =
+    '<div class="info-title">Schedule Summary</div>' +
+    'Principal: <strong>' + fmt(d.P) + '</strong> &nbsp;|&nbsp; ' +
+    'Quarterly EMI: <strong>' + fmt(d.emi) + '</strong> &nbsp;|&nbsp; ' +
+    'Total Interest (full schedule): <strong>' + fmt(d.totalInterest) + '</strong> &nbsp;|&nbsp; ' +
+    'Quarterly Rate: <strong>' + fmtPct(G.rate/4) + '</strong>';
+
+  // Main table
+  const tb = document.querySelector('#tbl_main tbody');
+  tb.innerHTML = d.rows.map(r => {
+    const isOpt = r.i === d.optQ;
+    const cls = isOpt ? 'row-optimal' : '';
+    const badge = isOpt ? '<span class="badge badge-green">Optimal LS Quarter</span>' : '';
+    return `<tr class="${cls}">
+      <td>${r.i}${badge}</td>
+      <td>${fmt(r.opening)}</td>
+      <td class="text-blue">${fmt(r.intC)}</td>
+      <td>${fmtPct(r.intShare)}</td>
+      <td>${fmt(r.prinC)}</td>
+      <td>${fmt(r.emi)}</td>
+      <td>${fmt(r.closing)}</td>
+      <td class="text-blue">${fmt(r.cumInt)}</td>
+      <td>${fmtPct(r.cumIntPct)}</td>
+    </tr>`;
+  }).join('');
+
+  // LS table
+  // Day 1 row first
+  const ltb = document.querySelector('#tbl_ls tbody');
+  let lsHtml = `<tr>
+    <td>Day 1 (Before Q1)</td>
+    <td>${fmt(0)}</td>
+    <td class="text-blue">${fmt(0)}</td>
+    <td>${fmt(d.P)}</td>
+    <td>${fmt(d.P)}</td>
+    <td class="text-red">${fmt(d.totalInterest)}</td>
+    <td class="text-red">0.0%</td>
+    <td style="color:var(--red);font-size:11px">Avoid - full interest lost</td>
+  </tr>`;
+  lsHtml += d.rows.map(r => {
+    const isOpt = r.i === d.optQ;
+    const cls = isOpt ? 'row-optimal' : '';
+    const badge = isOpt ? '<span class="badge badge-green">Optimal</span>' : '';
+    const emiCollected = r.emi * r.i;
+    // lsValue = P + cumInt (authority receives all principal + interest earned so far)
+    const lsVal = d.P + r.cumInt;
+    const assess = isOpt ? 'Recommended - optimal balance' :
+      r.i < d.optQ ? 'Suboptimal - too early' :
+      r.cumIntPct > 85 ? 'Good - late but acceptable' : 'Acceptable';
+    const aColor = isOpt ? 'var(--green)' : r.i < d.optQ ? 'var(--red)' : 'var(--ink2)';
+    return `<tr class="${cls}">
+      <td>After Q${r.i}${badge}</td>
+      <td>${fmt(emiCollected)}</td>
+      <td class="text-blue">${fmt(r.cumInt)}</td>
+      <td>${fmt(r.outstanding)}</td>
+      <td class="${isOpt?'text-green':''}" style="font-weight:600">${fmt(lsVal)}</td>
+      <td class="${r.remInt < d.totalInterest*0.1 ? 'text-green' : 'text-red'}">${fmt(r.remInt)}</td>
+      <td class="${r.cumIntPct >= 55 ? 'text-green' : r.cumIntPct >= 30 ? 'text-amber' : 'text-red'}">${fmtPct(r.cumIntPct)}</td>
+      <td style="color:${aColor};font-size:11px">${assess}</td>
+    </tr>`;
+  }).join('');
+  // Full schedule row
+  lsHtml += `<tr>
+    <td>Full Schedule</td>
+    <td>${fmt(d.totalEMIs)}</td>
+    <td class="text-green">${fmt(d.totalInterest)}</td>
+    <td>${fmt(0)}</td>
+    <td class="text-green" style="font-weight:600">${fmt(d.totalEMIs)}</td>
+    <td class="text-green">${fmt(0)}</td>
+    <td class="text-green">100.0%</td>
+    <td style="color:var(--teal);font-size:11px">Max interest, no liquidity</td>
+  </tr>`;
+  ltb.innerHTML = lsHtml;
+}
+
+/* ============================================================
+   PAGE 3 RENDER
+   ============================================================ */
+function renderP3(d) {
+  document.getElementById('kpi_p3').innerHTML = kpiHtml(d);
+  renderOptBanner(d, 'opt_banner');
+
+  const labels = d.rows.map(r => 'Q' + r.i);
+  const intComps  = d.rows.map(r => Math.round(r.intC));
+  const prinComps = d.rows.map(r => Math.round(r.prinC));
+  const cumInts   = d.rows.map(r => Math.round(r.cumInt));
+  const remInts   = d.rows.map(r => Math.round(r.remInt));
+  const balances  = d.rows.map(r => Math.round(r.outstanding));
+  const intShares = d.rows.map(r => +r.intShare.toFixed(1));
+  // Receipt = P + cumInt at each quarter
+  const receipts  = d.rows.map(r => Math.round(d.P + r.cumInt));
+  const prinArr   = d.rows.map(() => Math.round(d.P));
+
+  // Chart 1: Split
+  mkChart('c_split', {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Interest', data: intComps, backgroundColor: '#2563eb', stack: 'a', borderRadius: 3 },
+      { label: 'Principal', data: prinComps, backgroundColor: '#cbd5e1', stack: 'a', borderRadius: 3 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}} },
+      scales:{ x:{...axOpt,stacked:true}, y:{...axOpt,stacked:true,ticks:{...axOpt.ticks,callback:v=>fmtK(v)}} }
+    }
+  });
+
+  // Chart 2: Cumulative
+  mkChart('c_cumul', {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Cumulative Interest', data: cumInts, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.08)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#2563eb' },
+      { label: 'Remaining Interest',  data: remInts,  borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.06)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#dc2626' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{ x:{...axOpt}, y:{...axOpt,ticks:{...axOpt.ticks,callback:v=>fmtK(v)}} }
+    }
+  });
+
+  // Chart 3: Marginal
+  mkChart('c_marginal', {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label: 'Marginal Interest',
+      data: intComps,
+      backgroundColor: d.rows.map((_,i) => i+1===d.optQ ? '#059669' : 'rgba(8,145,178,0.65)'),
+      borderRadius: 4
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{ x:{...axOpt}, y:{...axOpt,ticks:{...axOpt.ticks,callback:v=>fmtK(v)}} }
+    }
+  });
+
+  // Chart 4: Crossover
+  mkChart('c_cross', {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Outstanding Balance', data:balances, borderColor:'#d97706', backgroundColor:'rgba(217,119,6,0.07)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#d97706' },
+      { label:'Cumul. Interest Earned', data:cumInts, borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.07)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#059669' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{ x:{...axOpt}, y:{...axOpt,ticks:{...axOpt.ticks,callback:v=>fmtK(v)}} }
+    }
+  });
+
+  // Chart 5: Receipt
+  mkChart('c_receipt', {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'Cumul. Interest', data:cumInts, backgroundColor:'rgba(5,150,105,0.7)', stack:'a', borderRadius:0 },
+      { label:'Principal',       data:prinArr,  backgroundColor:'rgba(37,99,235,0.45)', stack:'a', borderRadius:3 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{footer:items=>'Total: '+fmt(items.reduce((s,i)=>s+i.raw,0))}},
+        annotation:{}
+      },
+      scales:{ x:{...axOpt,stacked:true}, y:{...axOpt,stacked:true,
+        ticks:{...axOpt.ticks,callback:v=>fmtK(v)},
+        // draw baseline
+      }}
+    }
+  });
+  // Draw full-schedule line manually via plugin
+  G.charts['c_receipt'].options.plugins.annotation = {};  // no external plugin needed, just a dataset
+  // Add reference line as a dataset
+  const fullTotal = Math.round(d.totalEMIs);
+  G.charts['c_receipt'].data.datasets.push({
+    type: 'line', label: 'Full Schedule', data: d.rows.map(()=>fullTotal),
+    borderColor: '#1a1a2e', borderWidth: 1.5, borderDash: [5,4],
+    pointRadius: 0, fill: false, stack: undefined
+  });
+  G.charts['c_receipt'].update();
+
+  // Chart 6: % share
+  mkChart('c_pct', {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Interest % of EMI', data: intShares,
+      borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.07)', fill:true, tension:0.4,
+      pointRadius:4, pointBackgroundColor:'#7c3aed'
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
+      scales:{ x:{...axOpt}, y:{...axOpt,min:0,max:100,ticks:{...axOpt.ticks,callback:v=>v+'%'}} }
+    }
+  });
+}
+
+/* ============================================================
+   PAGE 4 RENDER
+   ============================================================ */
+function renderP4(d) {
+  renderOptBanner(d, 'opt_banner_4');
+
+  // Quarter buttons
+  const qb = document.getElementById('q_btns');
+  qb.innerHTML = '';
+  // "Full schedule" button
+  const fb = document.createElement('button');
+  fb.className = 'q-btn never-btn' + (G.selQ === 0 ? ' sel-active' : '');
+  fb.textContent = 'Full Schedule (No LS)';
+  fb.onclick = () => { G.selQ = 0; renderP4(d); };
+  qb.appendChild(fb);
+  for (let i = 1; i <= d.n; i++) {
+    const btn = document.createElement('button');
+    const isOpt = i === d.optQ;
+    btn.className = 'q-btn' + (isOpt ? ' opt-btn' : '') + (G.selQ === i ? ' sel-active' : '');
+    btn.textContent = isOpt ? 'Q' + i + ' (Optimal)' : 'Q' + i;
+    btn.title = 'Allow lump sum after installment ' + i;
+    btn.onclick = ((qi) => () => { G.selQ = qi; renderP4(d); })(i);
+    qb.appendChild(btn);
+  }
+
+  // Insight box
+  const si = document.getElementById('sel_insight');
+  if (G.selQ === 0) {
+    si.className = 'info-box blue spacer';
+    si.innerHTML = '<div class="info-title">Scenario: Full Installment Schedule (No Lump Sum)</div>' +
+      'The authority collects all <strong>' + d.n + ' quarterly installments</strong> of <strong>' + fmt(d.emi) + '</strong> each. ' +
+      'Total receipts = <strong>' + fmt(d.totalEMIs) + '</strong>, comprising principal recovery of <strong>' + fmt(d.P) + '</strong> ' +
+      'plus total interest income of <strong>' + fmt(d.totalInterest) + '</strong>. ' +
+      'No interest is foregone. This is the maximum interest scenario but offers no early liquidity.';
+  } else {
+    const r = d.rows[G.selQ - 1];
+    const isOpt = G.selQ === d.optQ;
+    const lsVal = d.P + r.cumInt;
+    si.className = isOpt ? 'info-box green spacer' : (G.selQ < d.optQ ? 'info-box red spacer' : 'info-box blue spacer');
+    si.innerHTML = '<div class="info-title">' + (isOpt ? 'Optimal Scenario Selected' : 'Simulated Scenario') + ': Lump Sum After Quarter ' + G.selQ + '</div>' +
+      'After <strong>' + G.selQ + '</strong> installment(s), cumulative interest earned = <strong>' + fmt(r.cumInt) + '</strong> ' +
+      '(' + fmtPct(r.cumIntPct) + ' of total interest). ' +
+      'Outstanding principal balance = <strong>' + fmt(r.outstanding) + '</strong>. ' +
+      'If the allottee now settles in full, the authority receives <strong>' + fmt(lsVal) + '</strong> ' +
+      '(= Principal <strong>' + fmt(d.P) + '</strong> + Cumulative Interest <strong>' + fmt(r.cumInt) + '</strong>). ' +
+      'Interest foregone = <strong>' + fmt(r.remInt) + '</strong> (' + fmtPct(r.remInt/d.totalInterest*100) + ' of total interest).' +
+      (isOpt ? ' <strong>This is the recommended optimal quarter.</strong>' :
+       G.selQ < d.optQ ? ' Warning: this is earlier than optimal. Consider waiting until at least Q' + d.optQ + '.' :
+       ' This is past the optimal quarter; interest foregone is small.');
+  }
+
+  // Selected KPIs
+  if (G.selQ === 0) {
+    document.getElementById('kpi_sel').innerHTML = `
+      <div class="kpi kpi-blue"><div class="kpi-label">Principal</div><div class="kpi-value">${fmt(d.P)}</div><div class="kpi-sub">Financed amount</div></div>
+      <div class="kpi kpi-green"><div class="kpi-label">Total Interest Earned</div><div class="kpi-value">${fmt(d.totalInterest)}</div><div class="kpi-sub">Full schedule, all quarters</div></div>
+      <div class="kpi kpi-teal"><div class="kpi-label">Quarterly EMI</div><div class="kpi-value">${fmt(d.emi)}</div><div class="kpi-sub">${G.rate}% p.a. / ${fmtPct(G.rate/4)} per qtr</div></div>
+      <div class="kpi kpi-amber"><div class="kpi-label">Total Authority Receipt</div><div class="kpi-value">${fmt(d.totalEMIs)}</div><div class="kpi-sub">Full schedule = P + Total Interest</div></div>
+      <div class="kpi kpi-green"><div class="kpi-label">Interest Foregone</div><div class="kpi-value">Rs. 0</div><div class="kpi-sub">No lump sum - full schedule</div></div>
+    `;
+  } else {
+    const r = d.rows[G.selQ - 1];
+    const lsVal = d.P + r.cumInt;
+    document.getElementById('kpi_sel').innerHTML = `
+      <div class="kpi kpi-blue"><div class="kpi-label">Principal</div><div class="kpi-value">${fmt(d.P)}</div><div class="kpi-sub">Full amount financed</div></div>
+      <div class="kpi kpi-teal"><div class="kpi-label">Quarterly EMI</div><div class="kpi-value">${fmt(d.emi)}</div><div class="kpi-sub">${G.rate}% p.a. / ${fmtPct(G.rate/4)} per qtr</div></div>
+      <div class="kpi kpi-blue"><div class="kpi-label">Cumul. Interest Earned (Q${G.selQ})</div><div class="kpi-value">${fmt(r.cumInt)}</div><div class="kpi-sub">${fmtPct(r.cumIntPct)} of total interest</div></div>
+      <div class="kpi kpi-amber"><div class="kpi-label">Outstanding Principal at Q${G.selQ}</div><div class="kpi-value">${fmt(r.outstanding)}</div><div class="kpi-sub">Lump sum payable by allottee</div></div>
+      <div class="kpi kpi-green"><div class="kpi-label">Total Receipt (P + Int Earned)</div><div class="kpi-value">${fmt(lsVal)}</div><div class="kpi-sub">= ${fmt(d.P)} + ${fmt(r.cumInt)}</div></div>
+      <div class="kpi kpi-red"><div class="kpi-label">Interest Foregone</div><div class="kpi-value">${fmt(r.remInt)}</div><div class="kpi-sub">${fmtPct(r.remInt/d.totalInterest*100)} of total interest lost</div></div>
+    `;
+  }
+
+  // Scenario cards
+  const scenariosQ = [0, ...d.rows.map(r => r.i), -1]; // 0=day1, -1=full
+  // deduplicate and pick representative
+  const keyScenarios = [
+    { label: 'Day 1', sub: 'Immediate (no EMIs paid)', q: 0, day1: true },
+    { label: 'Q' + Math.ceil(d.n*0.25), sub: 'After 25% installments', q: Math.ceil(d.n*0.25) },
+    { label: 'Q' + Math.ceil(d.n*0.5), sub: 'Halfway through', q: Math.ceil(d.n*0.5) },
+    { label: 'Q' + d.optQ + ' (Optimal)', sub: 'Recommended quarter', q: d.optQ },
+    { label: 'Q' + Math.ceil(d.n*0.75), sub: 'After 75% installments', q: Math.ceil(d.n*0.75) },
+    { label: 'Full Schedule', sub: 'No lump sum, all EMIs', q: -1 }
+  ];
+  // deduplicate by q
+  const seen = new Set();
+  let scHtml = '';
+  keyScenarios.forEach(s => {
+    const key = s.q;
+    if (seen.has(key)) return; seen.add(key);
+    let intE, lsV, forgone, totalRcpt;
+    if (s.day1) {
+      intE=0; lsV=d.P; forgone=d.totalInterest; totalRcpt=d.P;
+    } else if (s.q === -1) {
+      intE=d.totalInterest; lsV=0; forgone=0; totalRcpt=d.totalEMIs;
+    } else {
+      const r = d.rows[Math.min(s.q, d.n)-1];
+      intE=r.cumInt; lsV=r.outstanding; forgone=r.remInt; totalRcpt=d.P+r.cumInt;
+    }
+    const isOpt = !s.day1 && s.q !== -1 && s.q === d.optQ;
+    const isSel = G.selQ === s.q || (G.selQ===0 && s.day1) || (G.selQ===0 && s.q===-1 && true) ;
+    const isSelActual = (G.selQ === 0 && s.q === -1) ? false : (G.selQ === 0 && s.day1 ? false : G.selQ === s.q);
+    const isBoth = isOpt && isSelActual;
+    const cls = isBoth ? 'sc-card both-card' : isSelActual ? 'sc-card sel-card' : isOpt ? 'sc-card opt-card' : 'sc-card';
+    const chip = isBoth ? '<span class="sc-chip chip-opt">Selected + Optimal</span>' :
+                 isSelActual ? '<span class="sc-chip chip-sel">Selected</span>' :
+                 isOpt ? '<span class="sc-chip chip-opt">Optimal</span>' : '';
+    scHtml += `<div class="${cls}">
+      ${chip}
+      <div class="sc-title">${s.label}</div>
+      <div class="sc-sub">${s.sub}</div>
+      <div class="sc-line"><span class="lbl">Interest earned</span><span class="val">${fmt(intE)}</span></div>
+      <div class="sc-line"><span class="lbl">Outstanding principal</span><span class="val">${s.q===-1?'Nil':fmt(lsV)}</span></div>
+      <div class="sc-line"><span class="lbl">Interest foregone</span><span class="val" style="color:${forgone===0?'var(--green)':forgone>d.totalInterest*0.3?'var(--red)':'var(--ink2)'}">${fmt(forgone)}</span></div>
+      <div class="sc-total-row"><span class="lbl">Total to Authority</span><span class="val">${fmt(totalRcpt)}</span></div>
+    </div>`;
+  });
+  document.getElementById('sc_grid').innerHTML = scHtml;
+
+  // Scenario chart
+  const labels = d.rows.map(r => 'Q'+r.i);
+  const receipts = d.rows.map(r => Math.round(d.P + r.cumInt));
+  const cumInts  = d.rows.map(r => Math.round(r.cumInt));
+  const prinArr  = d.rows.map(() => Math.round(d.P));
+  const fullBase = Math.round(d.totalEMIs);
+  const selBg    = d.rows.map((_,i) => i+1===G.selQ ? 'rgba(37,99,235,0.85)' : i+1===d.optQ ? 'rgba(5,150,105,0.7)' : 'rgba(5,150,105,0.5)');
+  const selPBg   = d.rows.map((_,i) => i+1===G.selQ ? 'rgba(37,99,235,0.4)' : 'rgba(37,99,235,0.3)');
+
+  mkChart('c_scenarios', {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'Cumul. Interest', data:cumInts, backgroundColor:selBg, stack:'a', borderRadius:0 },
+      { label:'Principal', data:prinArr, backgroundColor:selPBg, stack:'a', borderRadius:3 },
+      { label:'Full Schedule', data:d.rows.map(()=>fullBase),
+        type:'line', borderColor:'#1a1a2e', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{ x:{...axOpt,stacked:true}, y:{...axOpt,stacked:true,ticks:{...axOpt.ticks,callback:v=>fmtK(v)}} }
+    }
+  });
+
+  // Foregone chart
+  const foregone = d.rows.map(r => Math.round(r.remInt));
+  mkChart('c_forgone', {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label:'Interest Foregone',
+      data: foregone,
+      backgroundColor: d.rows.map((_,i)=>i+1===G.selQ?'rgba(37,99,235,0.8)':i+1===d.optQ?'rgba(5,150,105,0.75)':'rgba(220,38,38,0.6)'),
+      borderRadius: 4
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+      scales:{ x:{...axOpt}, y:{...axOpt,ticks:{...axOpt.ticks,callback:v=>fmtK(v)}} }
+    }
+  });
+}
+
+/* ============================================================
+   SHARED HELPERS
+   ============================================================ */
+function kpiHtml(d) {
+  return `
+    <div class="kpi kpi-blue">
+      <div class="kpi-label">Plot Price</div>
+      <div class="kpi-value">${fmt(G.price)}</div>
+      <div class="kpi-sub">Total property value</div>
+    </div>
+    <div class="kpi kpi-teal">
+      <div class="kpi-label">Principal (Financed)</div>
+      <div class="kpi-value">${fmt(d.P)}</div>
+      <div class="kpi-sub">${G.finPct}% of plot price</div>
+    </div>
+    <div class="kpi kpi-amber">
+      <div class="kpi-label">Quarterly EMI</div>
+      <div class="kpi-value">${fmt(d.emi)}</div>
+      <div class="kpi-sub">${G.rate}% p.a. = ${fmtPct(G.rate/4)} per quarter</div>
+    </div>
+    <div class="kpi kpi-green">
+      <div class="kpi-label">Total Interest (Full Schedule)</div>
+      <div class="kpi-value">${fmt(d.totalInterest)}</div>
+      <div class="kpi-sub">${fmtPct(d.totalInterest/d.P*100)} of principal</div>
+    </div>
+    <div class="kpi kpi-blue">
+      <div class="kpi-label">Total Receipts (Full Schedule)</div>
+      <div class="kpi-value">${fmt(d.totalEMIs)}</div>
+      <div class="kpi-sub">Principal + Total Interest</div>
+    </div>
+    <div class="kpi kpi-green">
+      <div class="kpi-label">Optimal LS Quarter</div>
+      <div class="kpi-value">Q${d.optQ}</div>
+      <div class="kpi-sub">${fmtPct(d.rows[d.optQ-1].cumIntPct)} interest captured</div>
+    </div>
+  `;
+}
+
+function renderOptBanner(d, id) {
+  const r = d.rows[d.optQ - 1];
+  document.getElementById(id).innerHTML = `
+    <div class="ob-left">
+      <div class="ob-title">Optimal Lump Sum Quarter: Q${d.optQ}</div>
+      <div class="ob-desc">
+        By quarter <strong>${d.optQ}</strong>, the authority has captured <strong>${fmtPct(r.cumIntPct)}</strong> of total interest income.
+        Marginal interest in subsequent quarters declines sharply and the remaining foregone interest of
+        <strong>${fmt(r.remInt)}</strong> is small relative to the liquidity value of receiving
+        <strong>${fmt(r.outstanding)}</strong> as an immediate lump sum.
+        Total authority receipt at this quarter = <strong>${fmt(d.P + r.cumInt)}</strong>.
+      </div>
+    </div>
+    <div class="ob-stats">
+      <div class="ob-stat"><div class="num">Q${d.optQ}</div><div class="lbl">Optimal Quarter</div></div>
+      <div class="ob-stat"><div class="num">${fmtPct(r.cumIntPct)}</div><div class="lbl">Interest Captured</div></div>
+      <div class="ob-stat"><div class="num">${fmt(r.outstanding)}</div><div class="lbl">Lump Sum Receivable</div></div>
+      <div class="ob-stat"><div class="num">${fmt(d.P + r.cumInt)}</div><div class="lbl">Total Receipt</div></div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(function init() {
+  const d = compute();
+  renderP1(d);
+  // Set initial selQ to optQ
+  G.selQ = d.optQ;
+})();
+</script>
+</body>
+</html>
